@@ -187,15 +187,14 @@ async function processQueue() {
 
       // ===== DM =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/17841443788151017/messages`,
+        `https://graph.facebook.com/v19.0/${job.comment_id}/private_replies`,
         {
-          recipient: { id: job.user_id },
-          message: { text: `Here’s the link 👇 ${link}` }
+            message: `Here’s the link 👇 ${link}`
         },
         {
-          params: { access_token: PAGE_ACCESS_TOKEN }
+            params: { access_token: PAGE_ACCESS_TOKEN }
         }
-      );
+    );
 
       // ===== COMMENT REPLY =====
       await axios.post(
