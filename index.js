@@ -79,6 +79,8 @@ let processing = false;
 
 // ===== RECEIVE EVENTS =====
 app.post("/webhook", (req, res) => {
+    console.log("WEBHOOK BODY log:", JSON.stringify(req.body, null, 2));
+    res.sendStatus(200);
   const entries = req.body.entry || [];
 
   entries.forEach(entry => {
