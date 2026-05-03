@@ -4,24 +4,11 @@
   "description": "Insta chat app for auto DM based on a comment trigger on any reel with configurability",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tejadandigunta/instachat.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/tejadandigunta/instachat/issues"
-  },
-  "homepage": "https://github.com/tejadandigunta/instachat#readme",
   "dependencies": {
     "axios": "^1.16.0",
-    "body-parser": "^2.2.2",
-    "express": "^5.2.1"
+    "express": "^4.18.2"
   }
 }
