@@ -118,10 +118,10 @@ app.post("/webhook", (req, res) => {
           return;
         }
 
-        // 🎯 Trigger rule
+       // 🎯 Trigger rule
         if (!shouldTrigger(text)) {
-          console.log("⚠️ Skipped (trigger rule):", text);
-          return;
+        console.log("⚠️ Skipped (trigger rule):", text);
+        return;
         }
 
         // 🔍 Mapping check
@@ -129,25 +129,25 @@ app.post("/webhook", (req, res) => {
         console.log("Available keys:", Object.keys(REEL_LINKS));
 
         if (!REEL_LINKS[reelId]) {
-          console.log("❌ Unmapped reel skipped:", reelId);
-          return;
+        console.log("❌ Unmapped reel skipped:", reelId);
+        return;
         }
 
-        // 🔁 Duplicate protection
-        if (!sentMap.has(userId)) {
-          sentMap.set(userId, new Set());
+        // 🔁 Duplicate protection (based on comment_id)
+        if (!sentMap.has("comments")) {
+        sentMap.set("comments", new Set());
         }
 
-        const userReels = sentMap.get(userId);
+        const processedComments = sentMap.get("comments");
 
-        if (userReels.has(reelId)) {
-          console.log("⚠️ Duplicate skipped:", userId, reelId);
-          return;
+        if (processedComments.has(c.id)) {
+        console.log("⚠️ Duplicate skipped:", c.id);
+        return;
         }
 
-        userReels.add(reelId);
+        processedComments.add(c.id);
 
-        console.log("✅ Added to queue:", userId, reelId);
+        console.log("✅ Added to queue:", userId, reelId, "comment:", c.id);
 
         // 🚀 Push to queue
         queue.push({
