@@ -10,13 +10,20 @@ const PAGE_ACCESS_TOKEN = "PASTE_YOUR_TOKEN_HERE";
 
 // ===== WEBHOOK VERIFY =====
 app.get("/webhook", (req, res) => {
-  if (
-    req.query["hub.mode"] === "subscribe" &&
-    req.query["hub.verify_token"] === VERIFY_TOKEN
-  ) {
-    return res.send(req.query["hub.challenge"]);
+  try {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (mode === "subscribe" && token === "myverifytoken") {
+      return res.status(200).send(challenge);
+    } else {
+      return res.sendStatus(403);
+    }
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
   }
-  res.sendStatus(403);
 });
 
 // ===== SIMPLE QUEUE =====
