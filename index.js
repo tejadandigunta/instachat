@@ -21,9 +21,12 @@ const sentMap = new Map(); // user_id → Set of reel_ids
 async function loadLinks() {
   try {
     const res = await axios.get(LINKS_URL, { timeout: 5000 });
+
     if (typeof res.data === "object" && res.data !== null) {
       REEL_LINKS = res.data;
+
       console.log("Links loaded:", Object.keys(REEL_LINKS).length);
+      console.log("Available keys:", Object.keys(REEL_LINKS)); // 🔥 DEBUG
     } else {
       console.log("Invalid JSON format from LINKS_URL");
     }
@@ -84,16 +87,25 @@ app.post("/webhook", (req, res) => {
     changes.forEach(change => {
       if (change.field === "comments") {
         const c = change.value;
-        console.log("Reel ID:", c.media?.id);
 
-        if (!shouldTrigger(c.text)) return;
+        const reelId = String(c.media?.id); // 🔥 FORCE STRING
+        const userId = c.from?.id;
 
-        const userId = c.from.id;
-        const reelId = c.media?.id;
+        console.log("Incoming reel:", reelId);
+        console.log("Comment text:", c.text);
+
+        if (!shouldTrigger(c.text)) {
+          console.log("Skipped (trigger rule):", c.text);
+          return;
+        }
+
+        // 🔥 DEBUG mapping
+        console.log("Checking mapping for:", reelId);
+        console.log("Available keys:", Object.keys(REEL_LINKS));
 
         // Skip if no reel or not mapped
         if (!reelId || !REEL_LINKS[reelId]) {
-          console.log("Unmapped reel skipped:", reelId);
+          console.log("❌ Unmapped reel skipped:", reelId);
           return;
         }
 
@@ -106,12 +118,14 @@ app.post("/webhook", (req, res) => {
 
         // Duplicate check
         if (userReels.has(reelId)) {
-          console.log("Duplicate skipped:", userId, reelId);
+          console.log("⚠️ Duplicate skipped:", userId, reelId);
           return;
         }
 
         // Mark as sent
         userReels.add(reelId);
+
+        console.log("✅ Added to queue:", userId, reelId);
 
         // Add to queue
         queue.push({
@@ -143,6 +157,9 @@ async function processQueue() {
 
       const link = REEL_LINKS[job.reel_id];
 
+      console.log("🚀 Processing:", job.user_id, job.reel_id);
+      console.log("🔗 Link:", link);
+
       // ===== DM =====
       await axios.post(
         `https://graph.facebook.com/v19.0/me/messages`,
@@ -166,10 +183,10 @@ async function processQueue() {
         }
       );
 
-      console.log("Done:", job.user_id);
+      console.log("✅ Done:", job.user_id);
 
     } catch (err) {
-      console.log("Error:", err.response?.data || err.message);
+      console.log("❌ Error:", err.response?.data || err.message);
     }
 
     // Rate limit
