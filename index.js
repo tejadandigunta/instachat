@@ -10,6 +10,49 @@ app.use(express.urlencoded({ extended: true }));
 const VERIFY_TOKEN = "myverifytoken";
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
+// 👉 PUT YOUR GITHUB RAW JSON URL HERE
+const LINKS_URL = "https://raw.githubusercontent.com/tejadandigunta/instachat-config/refs/heads/main/reel-links.json";
+
+// ===== IN-MEMORY STATE =====
+let REEL_LINKS = {}; // loaded from GitHub
+const sentMap = new Map(); // user_id → Set of reel_ids
+
+// ===== LOAD LINKS =====
+async function loadLinks() {
+  try {
+    const res = await axios.get(LINKS_URL, { timeout: 5000 });
+    if (typeof res.data === "object" && res.data !== null) {
+      REEL_LINKS = res.data;
+      console.log("Links loaded:", Object.keys(REEL_LINKS).length);
+    } else {
+      console.log("Invalid JSON format from LINKS_URL");
+    }
+  } catch (err) {
+    console.log("Failed to load links:", err.message);
+  }
+}
+
+// Load at startup
+loadLinks();
+
+// Refresh every 60 seconds
+setInterval(loadLinks, 60000);
+
+// ===== HELPER: TRIGGER LOGIC =====
+function shouldTrigger(text) {
+  if (!text) return false;
+
+  const trimmed = text.trim();
+
+  // Emoji-only (no letters or numbers)
+  const isEmojiOnly = /^[^\p{L}\p{N}]+$/u.test(trimmed);
+  if (isEmojiOnly) return true;
+
+  // Word count
+  const words = trimmed.split(/\s+/);
+  return words.length <= 3;
+}
+
 // ===== HEALTH CHECK =====
 app.get("/", (req, res) => {
   res.send("OK ROOT");
@@ -41,12 +84,40 @@ app.post("/webhook", (req, res) => {
     changes.forEach(change => {
       if (change.field === "comments") {
         const c = change.value;
+        console.log("Reel ID:", c.media?.id);
 
-        if (!c.text || c.text.length < 2) return;
+        if (!shouldTrigger(c.text)) return;
 
+        const userId = c.from.id;
+        const reelId = c.media?.id;
+
+        // Skip if no reel or not mapped
+        if (!reelId || !REEL_LINKS[reelId]) {
+          console.log("Unmapped reel skipped:", reelId);
+          return;
+        }
+
+        // Init user set
+        if (!sentMap.has(userId)) {
+          sentMap.set(userId, new Set());
+        }
+
+        const userReels = sentMap.get(userId);
+
+        // Duplicate check
+        if (userReels.has(reelId)) {
+          console.log("Duplicate skipped:", userId, reelId);
+          return;
+        }
+
+        // Mark as sent
+        userReels.add(reelId);
+
+        // Add to queue
         queue.push({
-          user_id: c.from.id,
-          comment_id: c.id
+          user_id: userId,
+          comment_id: c.id,
+          reel_id: reelId
         });
       }
     });
@@ -70,19 +141,21 @@ async function processQueue() {
         continue;
       }
 
-      // DM
+      const link = REEL_LINKS[job.reel_id];
+
+      // ===== DM =====
       await axios.post(
         `https://graph.facebook.com/v19.0/me/messages`,
         {
           recipient: { id: job.user_id },
-          message: { text: "Here’s the link 👇 YOUR_LINK" }
+          message: { text: `Here’s the link 👇 ${link}` }
         },
         {
           params: { access_token: PAGE_ACCESS_TOKEN }
         }
       );
 
-      // Comment reply
+      // ===== COMMENT REPLY =====
       await axios.post(
         `https://graph.facebook.com/v19.0/${job.comment_id}/replies`,
         {
@@ -99,6 +172,7 @@ async function processQueue() {
       console.log("Error:", err.response?.data || err.message);
     }
 
+    // Rate limit
     await new Promise(r => setTimeout(r, 3000));
   }
 
