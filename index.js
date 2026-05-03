@@ -1,9 +1,11 @@
 const express = require("express");
-
 const axios = require("axios");
 
 const app = express();
+
+// 🔥 REQUIRED
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.send("OK");
