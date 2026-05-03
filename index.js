@@ -5,8 +5,12 @@ const axios = require("axios");
 const app = express();
 app.use(bodyParser.json());
 
+app.get("/", (req, res) => {
+  res.send("OK");
+});
+
 const VERIFY_TOKEN = "myverifytoken";
-const PAGE_ACCESS_TOKEN = "PASTE_YOUR_TOKEN_HERE";
+const PAGE_ACCESS_TOKEN = "process.env.PAGE_ACCESS_TOKEN";
 
 // ===== WEBHOOK VERIFY =====
 app.get("/webhook", (req, res) => {
@@ -63,6 +67,12 @@ async function processQueue() {
 
   while (queue.length > 0) {
     const job = queue.shift();
+
+    if (!PAGE_ACCESS_TOKEN) {
+    console.log("Missing token");
+    continue;
+  }
+
 
     try {
       // SEND DM
