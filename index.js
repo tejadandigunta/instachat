@@ -79,68 +79,91 @@ let processing = false;
 
 // ===== RECEIVE EVENTS =====
 app.post("/webhook", (req, res) => {
-    console.log("WEBHOOK BODY log:", JSON.stringify(req.body, null, 2));
-    res.sendStatus(200);
-// //   const entries = req.body.entry || [];
+  // ✅ Always respond immediately (VERY IMPORTANT)
+  res.sendStatus(200);
 
-// //   entries.forEach(entry => {
-// //     const changes = entry.changes || [];
+  console.log("WEBHOOK BODY:", JSON.stringify(req.body, null, 2));
 
-// //     changes.forEach(change => {
-// //       if (change.field === "comments") {
-// //         const c = change.value;
+  try {
+    const entries = req.body.entry || [];
 
-// //         const reelId = String(c.media?.id); // 🔥 FORCE STRING
-// //         const userId = c.from?.id;
+    entries.forEach(entry => {
+      const changes = entry.changes || [];
 
-// //         console.log("Incoming reel:", reelId);
-// //         console.log("Comment text:", c.text);
+      changes.forEach(change => {
+        if (change.field !== "comments") return;
 
-// //         if (!shouldTrigger(c.text)) {
-// //           console.log("Skipped (trigger rule):", c.text);
-// //           return;
-// //         }
+        const c = change.value;
 
-// //         // 🔥 DEBUG mapping
-// //         console.log("Checking mapping for:", reelId);
-// //         console.log("Available keys:", Object.keys(REEL_LINKS));
+        const reelId = String(c.media?.id);
+        const userId = c.from?.id;
+        const username = c.from?.username;
+        const text = c.text;
 
-// //         // Skip if no reel or not mapped
-// //         if (!reelId || !REEL_LINKS[reelId]) {
-// //           console.log("❌ Unmapped reel skipped:", reelId);
-// //           return;
-// //         }
+        console.log("---- NEW COMMENT ----");
+        console.log("User:", userId, username);
+        console.log("Reel:", reelId);
+        console.log("Text:", text);
 
-// //         // Init user set
-// //         if (!sentMap.has(userId)) {
-// //           sentMap.set(userId, new Set());
-// //         }
+        // 🚫 Skip if missing data
+        if (!reelId || !userId) {
+          console.log("❌ Missing reelId/userId");
+          return;
+        }
 
-// //         const userReels = sentMap.get(userId);
+        // 🚫 Skip your own comments
+        const IG_USER_ID = "17841443788151017"; // 🔥 your IG business ID
+        if (userId === IG_USER_ID) {
+          console.log("⚠️ Skipping self comment");
+          return;
+        }
 
-// //         // Duplicate check
-// //         if (userReels.has(reelId)) {
-// //           console.log("⚠️ Duplicate skipped:", userId, reelId);
-// //           return;
-// //         }
+        // 🎯 Trigger rule
+        if (!shouldTrigger(text)) {
+          console.log("⚠️ Skipped (trigger rule):", text);
+          return;
+        }
 
-// //         // Mark as sent
-// //         userReels.add(reelId);
+        // 🔍 Mapping check
+        console.log("Checking mapping for:", reelId);
+        console.log("Available keys:", Object.keys(REEL_LINKS));
 
-// //         console.log("✅ Added to queue:", userId, reelId);
+        if (!REEL_LINKS[reelId]) {
+          console.log("❌ Unmapped reel skipped:", reelId);
+          return;
+        }
 
-// //         // Add to queue
-// //         queue.push({
-// //           user_id: userId,
-// //           comment_id: c.id,
-// //           reel_id: reelId
-// //         });
-// //       }
-// //     });
-//   });
+        // 🔁 Duplicate protection
+        if (!sentMap.has(userId)) {
+          sentMap.set(userId, new Set());
+        }
 
-//   processQueue();
-//   res.sendStatus(200);
+        const userReels = sentMap.get(userId);
+
+        if (userReels.has(reelId)) {
+          console.log("⚠️ Duplicate skipped:", userId, reelId);
+          return;
+        }
+
+        userReels.add(reelId);
+
+        console.log("✅ Added to queue:", userId, reelId);
+
+        // 🚀 Push to queue
+        queue.push({
+          user_id: userId,
+          comment_id: c.id,
+          reel_id: reelId
+        });
+      });
+    });
+
+    // 🚀 Start processing
+    processQueue();
+
+  } catch (err) {
+    console.log("❌ Webhook processing error:", err.message);
+  }
 });
 
 // ===== PROCESS QUEUE =====
