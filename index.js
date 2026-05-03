@@ -81,66 +81,66 @@ let processing = false;
 app.post("/webhook", (req, res) => {
     console.log("WEBHOOK BODY log:", JSON.stringify(req.body, null, 2));
     res.sendStatus(200);
-  const entries = req.body.entry || [];
+// //   const entries = req.body.entry || [];
 
-  entries.forEach(entry => {
-    const changes = entry.changes || [];
+// //   entries.forEach(entry => {
+// //     const changes = entry.changes || [];
 
-    changes.forEach(change => {
-      if (change.field === "comments") {
-        const c = change.value;
+// //     changes.forEach(change => {
+// //       if (change.field === "comments") {
+// //         const c = change.value;
 
-        const reelId = String(c.media?.id); // 🔥 FORCE STRING
-        const userId = c.from?.id;
+// //         const reelId = String(c.media?.id); // 🔥 FORCE STRING
+// //         const userId = c.from?.id;
 
-        console.log("Incoming reel:", reelId);
-        console.log("Comment text:", c.text);
+// //         console.log("Incoming reel:", reelId);
+// //         console.log("Comment text:", c.text);
 
-        if (!shouldTrigger(c.text)) {
-          console.log("Skipped (trigger rule):", c.text);
-          return;
-        }
+// //         if (!shouldTrigger(c.text)) {
+// //           console.log("Skipped (trigger rule):", c.text);
+// //           return;
+// //         }
 
-        // 🔥 DEBUG mapping
-        console.log("Checking mapping for:", reelId);
-        console.log("Available keys:", Object.keys(REEL_LINKS));
+// //         // 🔥 DEBUG mapping
+// //         console.log("Checking mapping for:", reelId);
+// //         console.log("Available keys:", Object.keys(REEL_LINKS));
 
-        // Skip if no reel or not mapped
-        if (!reelId || !REEL_LINKS[reelId]) {
-          console.log("❌ Unmapped reel skipped:", reelId);
-          return;
-        }
+// //         // Skip if no reel or not mapped
+// //         if (!reelId || !REEL_LINKS[reelId]) {
+// //           console.log("❌ Unmapped reel skipped:", reelId);
+// //           return;
+// //         }
 
-        // Init user set
-        if (!sentMap.has(userId)) {
-          sentMap.set(userId, new Set());
-        }
+// //         // Init user set
+// //         if (!sentMap.has(userId)) {
+// //           sentMap.set(userId, new Set());
+// //         }
 
-        const userReels = sentMap.get(userId);
+// //         const userReels = sentMap.get(userId);
 
-        // Duplicate check
-        if (userReels.has(reelId)) {
-          console.log("⚠️ Duplicate skipped:", userId, reelId);
-          return;
-        }
+// //         // Duplicate check
+// //         if (userReels.has(reelId)) {
+// //           console.log("⚠️ Duplicate skipped:", userId, reelId);
+// //           return;
+// //         }
 
-        // Mark as sent
-        userReels.add(reelId);
+// //         // Mark as sent
+// //         userReels.add(reelId);
 
-        console.log("✅ Added to queue:", userId, reelId);
+// //         console.log("✅ Added to queue:", userId, reelId);
 
-        // Add to queue
-        queue.push({
-          user_id: userId,
-          comment_id: c.id,
-          reel_id: reelId
-        });
-      }
-    });
-  });
+// //         // Add to queue
+// //         queue.push({
+// //           user_id: userId,
+// //           comment_id: c.id,
+// //           reel_id: reelId
+// //         });
+// //       }
+// //     });
+//   });
 
-  processQueue();
-  res.sendStatus(200);
+//   processQueue();
+//   res.sendStatus(200);
 });
 
 // ===== PROCESS QUEUE =====
@@ -164,7 +164,7 @@ async function processQueue() {
 
       // ===== DM =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/1784144378851017/messages`,
+        `https://graph.facebook.com/v19.0/17841443788151017/messages`,
         {
           recipient: { id: job.user_id },
           message: { text: `Here’s the link 👇 ${link}` }
