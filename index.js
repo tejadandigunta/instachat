@@ -162,7 +162,7 @@ async function processQueue() {
 
       // ===== DM =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/me/messages`,
+        `https://graph.facebook.com/v19.0/1784144378851017/messages`,
         {
           recipient: { id: job.user_id },
           message: { text: `Here’s the link 👇 ${link}` }
