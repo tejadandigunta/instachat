@@ -9,6 +9,7 @@ app.use(express.urlencoded({ extended: true }));
 // ===== CONFIG =====
 const VERIFY_TOKEN = "myverifytoken";
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+const IG_USER_ID = "17841443788151017"; 
 
 // 👉 PUT YOUR GITHUB RAW JSON URL HERE
 const LINKS_URL = "https://raw.githubusercontent.com/tejadandigunta/instachat-config/refs/heads/main/reel-links.json";
@@ -112,7 +113,6 @@ app.post("/webhook", (req, res) => {
         }
 
         // 🚫 Skip your own comments
-        const IG_USER_ID = "17841443788151017"; // 🔥 your IG business ID
         if (userId === IG_USER_ID) {
           console.log("⚠️ Skipping self comment");
           return;
