@@ -187,7 +187,7 @@ async function processQueue() {
 
       // ===== DM =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/${IG_USER_ID}/messages`,
+        `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
         {
           recipient: { comment_id: job.comment_id },
           message: { text: `Here's the link 👇 ${link}` }
@@ -199,7 +199,7 @@ async function processQueue() {
 
       // ===== COMMENT REPLY =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/${job.comment_id}/replies`,
+        `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
         {
           message: "Sent you DM ✅"
         },
