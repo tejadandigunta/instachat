@@ -187,9 +187,10 @@ async function processQueue() {
 
       // ===== DM =====
       await axios.post(
-        `https://graph.facebook.com/v19.0/${job.comment_id}/private_replies`,
+        `https://graph.facebook.com/v19.0/${IG_USER_ID}/messages`,
         {
-            message: `Here’s the link 👇 ${link}`
+          recipient: { comment_id: job.comment_id },
+          message: { text: `Here's the link 👇 ${link}` }
         },
         {
             params: { access_token: PAGE_ACCESS_TOKEN }
