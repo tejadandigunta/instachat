@@ -190,7 +190,7 @@ async function processQueue() {
         `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
         {
           recipient: { comment_id: job.comment_id },
-          message: { text: `Here's the link 👇 ${link}` }
+          message: { text: `Here's the link: ${link}` }
         },
         {
             params: { access_token: PAGE_ACCESS_TOKEN }
@@ -201,7 +201,7 @@ async function processQueue() {
       await axios.post(
         `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
         {
-          message: "Sent you DM ✅"
+          message: "Sent in DM ✅"
         },
         {
           params: { access_token: PAGE_ACCESS_TOKEN }
