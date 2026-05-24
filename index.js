@@ -27,7 +27,6 @@ async function loadLinks() {
       REEL_LINKS = res.data;
 
       console.log("Links loaded:", Object.keys(REEL_LINKS).length);
-      console.log("Available keys:", Object.keys(REEL_LINKS)); // 🔥 DEBUG
     } else {
       console.log("Invalid JSON format from LINKS_URL");
     }
@@ -78,6 +77,29 @@ app.get("/webhook", (req, res) => {
 const queue = [];
 let processing = false;
 
+app.get("/reels", (req, res) => {
+  res.sendFile(__dirname + "/reels.html");
+});
+
+app.get("/reels-data", async (req, res) => {
+  try {
+    const response = await axios.get(
+      `https://graph.instagram.com/v19.0/${IG_USER_ID}/media`,
+      {
+        params: {
+          fields: "id,media_type,media_product_type,permalink,timestamp,caption",
+          access_token: PAGE_ACCESS_TOKEN,
+          limit: 50
+        }
+      }
+    );
+    const reels = response.data.data.filter(m => m.media_product_type === "REELS");
+    res.json(reels);
+  } catch (err) {
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
 // ===== RECEIVE EVENTS =====
 app.post("/webhook", (req, res) => {
   // ✅ Always respond immediately (VERY IMPORTANT)
@@ -126,7 +148,6 @@ app.post("/webhook", (req, res) => {
 
         // 🔍 Mapping check
         console.log("Checking mapping for:", reelId);
-        console.log("Available keys:", Object.keys(REEL_LINKS));
 
         if (!REEL_LINKS[reelId]) {
         console.log("❌ Unmapped reel skipped:", reelId);
@@ -174,44 +195,53 @@ async function processQueue() {
   while (queue.length > 0) {
     const job = queue.shift();
 
+    if (!PAGE_ACCESS_TOKEN) {
+      console.log("Missing token");
+      continue;
+    }
+
+    const link = REEL_LINKS[job.reel_id];
+
+    console.log("🚀 Processing:", job.user_id, job.reel_id);
+    console.log("🔗 Link:", link);
+
+    let dmSuccess = true;
+
+    // ===== DM =====
     try {
-      if (!PAGE_ACCESS_TOKEN) {
-        console.log("Missing token");
-        continue;
-      }
-
-      const link = REEL_LINKS[job.reel_id];
-
-      console.log("🚀 Processing:", job.user_id, job.reel_id);
-      console.log("🔗 Link:", link);
-
-      // ===== DM =====
       await axios.post(
         `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
         {
           recipient: { comment_id: job.comment_id },
           message: { text: `Here's the link: ${link}` }
         },
-        {
-            params: { access_token: PAGE_ACCESS_TOKEN }
-        }
-    );
+        { params: { access_token: PAGE_ACCESS_TOKEN } }
+      );
+      console.log("✅ DM sent:", job.user_id);
+    } catch (err) {
+      dmSuccess = false;
+      const code = err.response?.data?.error?.error_subcode;
+      if (code === 2534025) {
+        console.log("⚠️ DM skipped — user has DMs restricted:", job.user_id);
+      } else {
+        console.log("❌ DM error:", err.response?.data || err.message);
+      }
+    }
 
-      // ===== COMMENT REPLY =====
+    // ===== COMMENT REPLY =====
+    try {
+      const replyMessage = dmSuccess
+        ? "Sent in DM ✅"
+        : "Unable to send you a DM due to your account restrictions 🔒 Please open your DMs and try again!";
+
       await axios.post(
         `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
-        {
-          message: "Sent in DM ✅"
-        },
-        {
-          params: { access_token: PAGE_ACCESS_TOKEN }
-        }
+        { message: replyMessage },
+        { params: { access_token: PAGE_ACCESS_TOKEN } }
       );
-
-      console.log("✅ Done:", job.user_id);
-
+      console.log("✅ Comment reply sent");
     } catch (err) {
-      console.log("❌ Error:", err.response?.data || err.message);
+      console.log("❌ Reply error:", err.response?.data || err.message);
     }
 
     // Rate limit
