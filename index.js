@@ -192,63 +192,56 @@ async function processQueue() {
   if (processing) return;
   processing = true;
 
-  while (queue.length > 0) {
-    const job = queue.shift();
+  try {
+    while (queue.length > 0) {
+      const job = queue.shift();
 
-    if (!PAGE_ACCESS_TOKEN) {
-      console.log("Missing token");
-      continue;
-    }
+      if (!PAGE_ACCESS_TOKEN) {
+        console.log("Missing token");
+        continue;
+      }
 
-    const link = REEL_LINKS[job.reel_id];
+      const link = REEL_LINKS[job.reel_id];
+      console.log("🚀 Processing:", job.user_id, job.reel_id);
+      console.log("🔗 Link:", link);
 
-    console.log("🚀 Processing:", job.user_id, job.reel_id);
-    console.log("🔗 Link:", link);
+      let dmSuccess = true;
 
-    let dmSuccess = true;
-
-    // ===== DM =====
-    try {
-      await axios.post(
-        `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
-        {
-          recipient: { comment_id: job.comment_id },
-          message: { text: `Here's the link: ${link}` }
-        },
-        { params: { access_token: PAGE_ACCESS_TOKEN } }
-      );
-      console.log("✅ DM sent:", job.user_id);
-    } catch (err) {
-      dmSuccess = false;
-      const code = err.response?.data?.error?.error_subcode;
-      if (code === 2534025) {
-        console.log("⚠️ DM skipped — user has DMs restricted:", job.user_id);
-      } else {
+      try {
+        await axios.post(
+          `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
+          {
+            recipient: { comment_id: job.comment_id },
+            message: { text: `Here's the link: ${link}` }
+          },
+          { params: { access_token: PAGE_ACCESS_TOKEN } }
+        );
+        console.log("✅ DM sent:", job.user_id);
+      } catch (err) {
+        dmSuccess = false;
         console.log("❌ DM error:", err.response?.data || err.message);
       }
+
+      try {
+        const replyMessage = dmSuccess
+          ? "Sent in DM ✅"
+          : "Unable to send you a DM due to your account restrictions 🔒 Please open your DMs and try again!";
+
+        await axios.post(
+          `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
+          { message: replyMessage },
+          { params: { access_token: PAGE_ACCESS_TOKEN } }
+        );
+        console.log("✅ Comment reply sent");
+      } catch (err) {
+        console.log("❌ Reply error:", err.response?.data || err.message);
+      }
+
+      await new Promise(r => setTimeout(r, 3000));
     }
-
-    // ===== COMMENT REPLY =====
-    try {
-      const replyMessage = dmSuccess
-        ? "Sent in DM ✅"
-        : "Unable to send you a DM due to your account restrictions 🔒 Please open your DMs and try again!";
-
-      await axios.post(
-        `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
-        { message: replyMessage },
-        { params: { access_token: PAGE_ACCESS_TOKEN } }
-      );
-      console.log("✅ Comment reply sent");
-    } catch (err) {
-      console.log("❌ Reply error:", err.response?.data || err.message);
-    }
-
-    // Rate limit
-    await new Promise(r => setTimeout(r, 3000));
+  } finally {
+    processing = false;  // ← always resets, even if something throws
   }
-
-  processing = false;
 }
 
 // ===== START SERVER =====
