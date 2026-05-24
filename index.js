@@ -49,7 +49,7 @@ function shouldTrigger(text) {
 
   // Emoji-only (no letters or numbers)
   const isEmojiOnly = /^[^\p{L}\p{N}]+$/u.test(trimmed);
-  if (isEmojiOnly) return true;
+  if (isEmojiOnly) return false;
 
   // Word count
   const words = trimmed.split(/\s+/);
