@@ -123,6 +123,12 @@ app.post("/webhook", (req, res) => {
         const username = c.from?.username;
         const text = c.text;
 
+        // 🚫 Skip reply comments — private reply API only works on top-level comments
+        if (c.parent_id) {
+          console.log("⚠️ Skipping reply comment (has parent_id):", c.id);
+          return;
+        }
+
         console.log("---- NEW COMMENT ----");
         console.log("User:", userId, username);
         console.log("Reel:", reelId);
