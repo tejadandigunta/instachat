@@ -231,7 +231,7 @@ async function processQueue() {
       try {
         const replyMessage = dmSuccess
           ? "Sent in DM ✅"
-          : "Unable to send you a DM due to your account restrictions 🔒 Please open your DMs and try again!";
+          : "Auto send failed, please share the reel in my DM, will respond there";
 
         await axios.post(
           `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
