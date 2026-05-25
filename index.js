@@ -217,7 +217,7 @@ async function processQueue() {
         await axios.post(
           `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
           {
-            recipient: { comment_id: job.comment_id },
+            recipient: { id: job.user_id },
             message: { text: `Here's the link: ${link}` }
           },
           { params: { access_token: PAGE_ACCESS_TOKEN } }
