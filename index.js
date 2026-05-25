@@ -243,11 +243,12 @@ async function processQueue() {
         console.log("❌ Reply error:", err.response?.data || err.message);
       }
 
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 20000));
     }
   } finally {
     processing = false;  // ← always resets, even if something throws
   }
+  
 }
 
 // ===== START SERVER =====
