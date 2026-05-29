@@ -197,7 +197,7 @@ app.post("/webhook", (req, res) => {
 async function processQueue() {
   if (processing) return;
   processing = true;
-
+  
   try {
     while (queue.length > 0) {
       const job = queue.shift();
@@ -210,9 +210,8 @@ async function processQueue() {
       const link = REEL_LINKS[job.reel_id];
       console.log("🚀 Processing:", job.user_id, job.reel_id);
       console.log("🔗 Link:", link);
-
+      /*
       let dmSuccess = true;
-
       try {
         await axios.post(
           `https://graph.instagram.com/v19.0/${IG_USER_ID}/messages`,
@@ -227,15 +226,17 @@ async function processQueue() {
         dmSuccess = false;
         console.log("❌ DM error:", err.response?.data || err.message);
       }
-
+      */
       try {
+        /*
         const replyMessage = dmSuccess
           ? "Sent in DM ✅"
           : "Auto send failed, please share the reel in my DM, will respond there";
+        */
 
         await axios.post(
           `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
-          { message: replyMessage },
+          { message: `Here's the link: ${link}` },
           { params: { access_token: PAGE_ACCESS_TOKEN } }
         );
         console.log("✅ Comment reply sent");
