@@ -41,6 +41,40 @@ loadLinks();
 // Refresh every 60 seconds
 setInterval(loadLinks, 60000);
 
+// ===== HELPER: FOLLOWER CHECK =====
+async function isFollowingMe(userId) {
+  try {
+    const res = await axios.get(`https://graph.instagram.com/v19.0/${userId}`, {
+      params: {
+        fields: "is_user_follow_business",
+        access_token: PAGE_ACCESS_TOKEN
+      }
+    });
+    return res.data.is_user_follow_business === true;
+  } catch (err) {
+    console.log("❌ Follow check error:", err.response?.data || err.message);
+    return false;
+  }
+}
+
+// ===== COMMENT REPLY VARIANTS (avoids robotic, identical replies) =====
+const DM_SENT_REPLIES = [
+  "Link landed in your DM 📩",
+  "Check out DM for link 📨",
+  "Done, sent to your DM ✅",
+  "Grab the link from DM 🔗",
+  "Link sent, happy learning 📚",
+  "Link is in your DM now 📥",
+  "Check your DM for link 👀",
+  "Sent the link, check your DM 📤",
+  "Get your link from DM 🎯",
+  "Done and dusted, link sent 🙌"
+];
+
+function getRandomReply() {
+  return DM_SENT_REPLIES[Math.floor(Math.random() * DM_SENT_REPLIES.length)];
+}
+
 // ===== HELPER: TRIGGER LOGIC =====
 function shouldTrigger(text) {
   if (!text) return false;
@@ -207,10 +241,17 @@ async function processQueue() {
         continue;
       }
 
+      // 🚫 Skip if the commenter doesn't follow me
+      const isFollower = await isFollowingMe(job.user_id);
+      if (!isFollower) {
+        console.log("⚠️ Skipping — user does not follow me:", job.user_id);
+        continue;
+      }
+
       const link = REEL_LINKS[job.reel_id];
       console.log("🚀 Processing:", job.user_id, job.reel_id);
       console.log("🔗 Link:", link);
-      /*
+
       let dmSuccess = true;
       try {
         await axios.post(
@@ -226,20 +267,18 @@ async function processQueue() {
         dmSuccess = false;
         console.log("❌ DM error:", err.response?.data || err.message);
       }
-      */
+
       try {
-        /*
         const replyMessage = dmSuccess
-          ? "Sent in DM ✅"
+          ? getRandomReply()
           : "Auto send failed, please share the reel in my DM, will respond there";
-        */
 
         await axios.post(
           `https://graph.instagram.com/v19.0/${job.comment_id}/replies`,
-          { message: `Here's the link: ${link}` },
+          { message: replyMessage },
           { params: { access_token: PAGE_ACCESS_TOKEN } }
         );
-        console.log("✅ Comment reply sent");
+        console.log("✅ Comment reply sent:", replyMessage);
       } catch (err) {
         console.log("❌ Reply error:", err.response?.data || err.message);
       }
