@@ -45,6 +45,17 @@ async function claimComment(commentId) {
   return ok === "OK";
 }
 
+const NON_FOLLOWER_REPLIES = [
+  "Please follow & add a new comment to get the link in DM 🙏",
+  "Follow me first, then comment on this reel again to receive the DM 📲",
+  "Hit follow, then drop a new comment on this reel and I'll DM you ✅",
+  "Follow the account & comment again on this reel to get the link 🔗",
+  "Follow first, then add a new comment here and the DM magic happens ✨",
+];
+
+const getRandomNonFollowerReply = () =>
+  NON_FOLLOWER_REPLIES[Math.floor(Math.random() * NON_FOLLOWER_REPLIES.length)];
+
 // ===== HELPERS (unchanged from your version) =====
 async function isFollowingMe(userId) {
   try {
@@ -88,11 +99,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ===== JOB PROCESSING =====
 async function processJob(job) {
-  const isFollower = await isFollowingMe(job.user_id);
-  if (!isFollower) {
-    console.log("⚠️ Skipping — user does not follow me:", job.user_id);
-    return;
+  console.log("⚠️ Non-follower, sending comment:", job.user_id);
+  try {
+    await axios.post(
+      `${GRAPH}/${job.comment_id}/replies`,
+      { message: getRandomNonFollowerReply() },
+      { params: { access_token: PAGE_ACCESS_TOKEN } }
+    );
+    console.log("✅ Non-follower reply sent");
+  } catch (err) {
+    console.log("❌ Non-follower reply error:", err.response?.data || err.message);
   }
+  return;
+}
 
   console.log("🚀 Processing:", job.user_id, job.reel_id, "🔗", job.link);
 
