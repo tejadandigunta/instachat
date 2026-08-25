@@ -10,9 +10,7 @@ const LINKS_URL = process.env.LINKS_URL;
 const GRAPH = "https://graph.instagram.com/v19.0";
 const redis = Redis.fromEnv();
 
-// ===== LINKS (replaces setInterval) =====
-// Module-level cache: reused while an instance stays warm, refetched on cold
-// start or after 60s. Same practical effect as your old refresh loop.
+// ===== LINKS =====
 let linksCache = { data: {}, at: 0 };
 const LINKS_TTL_MS = 60_000;
 
@@ -34,9 +32,7 @@ async function getLinks() {
   return linksCache.data;
 }
 
-// ===== DEDUPE (replaces sentMap) =====
-// SET NX is atomic, so two concurrent invocations can't both claim the
-// same comment. 7-day TTL keeps the keyspace from growing forever.
+// ===== DEDUPE =====
 async function claimComment(commentId) {
   const ok = await redis.set(`dm:comment:${commentId}`, 1, {
     nx: true,
@@ -45,6 +41,7 @@ async function claimComment(commentId) {
   return ok === "OK";
 }
 
+// ===== REPLY VARIANTS =====
 const NON_FOLLOWER_REPLIES = [
   "Please follow & add a new comment to get the link in DM 🙏",
   "Follow me first, then comment on this reel again to receive the DM 📲",
@@ -55,22 +52,6 @@ const NON_FOLLOWER_REPLIES = [
 
 const getRandomNonFollowerReply = () =>
   NON_FOLLOWER_REPLIES[Math.floor(Math.random() * NON_FOLLOWER_REPLIES.length)];
-
-// ===== HELPERS (unchanged from your version) =====
-async function isFollowingMe(userId) {
-  try {
-    const res = await axios.get(`${GRAPH}/${userId}`, {
-      params: {
-        fields: "is_user_follow_business",
-        access_token: PAGE_ACCESS_TOKEN,
-      },
-    });
-    return res.data.is_user_follow_business === true;
-  } catch (err) {
-    console.log("❌ Follow check error:", err.response?.data || err.message);
-    return false;
-  }
-}
 
 const DM_SENT_REPLIES = [
   "Link landed in your DM 📩",
@@ -88,10 +69,26 @@ const DM_SENT_REPLIES = [
 const getRandomReply = () =>
   DM_SENT_REPLIES[Math.floor(Math.random() * DM_SENT_REPLIES.length)];
 
+// ===== HELPERS =====
+async function isFollowingMe(userId) {
+  try {
+    const res = await axios.get(`${GRAPH}/${userId}`, {
+      params: {
+        fields: "is_user_follow_business",
+        access_token: PAGE_ACCESS_TOKEN,
+      },
+    });
+    return res.data.is_user_follow_business === true;
+  } catch (err) {
+    console.log("❌ Follow check error:", err.response?.data || err.message);
+    return false;
+  }
+}
+
 function shouldTrigger(text) {
   if (!text) return false;
   const trimmed = text.trim();
-  if (/^[^\p{L}\p{N}]+$/u.test(trimmed)) return true; // emoji-only
+  if (/^[^\p{L}\p{N}]+$/u.test(trimmed)) return true;
   return trimmed.split(/\s+/).length <= 3;
 }
 
@@ -99,19 +96,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ===== JOB PROCESSING =====
 async function processJob(job) {
-  console.log("⚠️ Non-follower, sending comment:", job.user_id);
-  try {
-    await axios.post(
-      `${GRAPH}/${job.comment_id}/replies`,
-      { message: getRandomNonFollowerReply() },
-      { params: { access_token: PAGE_ACCESS_TOKEN } }
-    );
-    console.log("✅ Non-follower reply sent");
-  } catch (err) {
-    console.log("❌ Non-follower reply error:", err.response?.data || err.message);
+  const isFollower = await isFollowingMe(job.user_id);
+  if (!isFollower) {
+    console.log("⚠️ Non-follower, sending comment:", job.user_id);
+    try {
+      await axios.post(
+        `${GRAPH}/${job.comment_id}/replies`,
+        { message: getRandomNonFollowerReply() },
+        { params: { access_token: PAGE_ACCESS_TOKEN } }
+      );
+      console.log("✅ Non-follower reply sent");
+    } catch (err) {
+      console.log("❌ Non-follower reply error:", err.response?.data || err.message);
+    }
+    return;
   }
-  return;
-}
 
   console.log("🚀 Processing:", job.user_id, job.reel_id, "🔗", job.link);
 
@@ -147,7 +146,7 @@ async function processJob(job) {
   }
 }
 
-// ===== EVENT HANDLER (runs after the 200 is sent) =====
+// ===== EVENT HANDLER =====
 async function handleEvent(body) {
   const links = await getLinks();
   const jobs = [];
@@ -200,7 +199,6 @@ async function handleEvent(body) {
     }
   }
 
-  // Sequential with a pause, matching your old rate-limit behaviour
   for (let i = 0; i < jobs.length; i++) {
     await processJob(jobs[i]);
     if (i < jobs.length - 1) await sleep(2000);
@@ -223,7 +221,6 @@ module.exports = async (req, res) => {
   if (req.method === "POST") {
     console.log("WEBHOOK BODY:", JSON.stringify(req.body, null, 2));
 
-    // Ack Meta immediately, then keep the invocation alive for the work
     res.status(200).send("EVENT_RECEIVED");
     waitUntil(
       handleEvent(req.body).catch((err) =>
