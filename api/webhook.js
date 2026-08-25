@@ -97,21 +97,6 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ===== JOB PROCESSING =====
 async function processJob(job) {
-  const isFollower = await isFollowingMe(job.user_id);
-  if (!isFollower) {
-    console.log("⚠️ Non-follower, sending comment:", job.user_id);
-    try {
-      await axios.post(
-        `${GRAPH}/${job.comment_id}/replies`,
-        { message: getRandomNonFollowerReply() },
-        { params: { access_token: PAGE_ACCESS_TOKEN } }
-      );
-      console.log("✅ Non-follower reply sent");
-    } catch (err) {
-      console.log("❌ Non-follower reply error:", err.response?.data || err.message);
-    }
-    return;
-  }
 
   console.log("🚀 Processing:", job.user_id, job.reel_id, "🔗", job.link);
 
