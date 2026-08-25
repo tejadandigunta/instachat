@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/reels", "destination": "/reels.html" },
+    { "source": "/webhook", "destination": "/api/webhook" }
+  ]
+}
