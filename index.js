@@ -44,12 +44,13 @@ setInterval(loadLinks, 60000);
 // ===== HELPER: FOLLOWER CHECK =====
 async function isFollowingMe(userId) {
   try {
-    const res = await axios.get(`https://graph.instagram.com/v19.0/${userId}`, {
+    const res = await axios.get(`${GRAPH}/${userId}`, {
       params: {
         fields: "is_user_follow_business",
-        access_token: PAGE_ACCESS_TOKEN
-      }
+        access_token: PAGE_ACCESS_TOKEN,
+      },
     });
+    console.log("🔍 Follow check:", userId, JSON.stringify(res.data));
     return res.data.is_user_follow_business === true;
   } catch (err) {
     console.log("❌ Follow check error:", err.response?.data || err.message);
