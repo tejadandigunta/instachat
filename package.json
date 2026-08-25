@@ -1,6 +1,9 @@
 {
   "name": "instachat",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@upstash/redis": "^1.34.3",
     "@vercel/functions": "^2.0.0",
