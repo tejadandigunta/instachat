@@ -159,11 +159,6 @@ async function handleEvent(body) {
       const reelId = String(c.media?.id || "");
       const userId = c.from?.id;
 
-      if (c.parent_id && c.parent_id !== reelId) {
-        console.log("⚠️ Skipping reply comment (has parent_id):", c.id);
-        continue;
-      }
-
       console.log("---- NEW COMMENT ----");
       console.log("User:", userId, c.from?.username);
       console.log("Reel:", reelId, "| Text:", c.text);
