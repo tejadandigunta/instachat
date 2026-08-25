@@ -408,7 +408,7 @@
       btnText.textContent = 'Fetching...';
 
       try {
-        const url = `/reels-data`;
+        const url = `/api/reels-data`;
         const res = await fetch(url);
         const data = await res.json();
 
