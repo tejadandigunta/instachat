@@ -78,6 +78,7 @@ async function isFollowingMe(userId) {
         access_token: PAGE_ACCESS_TOKEN,
       },
     });
+    console.log("🔍 Follow check:", userId, JSON.stringify(res.data));
     return res.data.is_user_follow_business === true;
   } catch (err) {
     console.log("❌ Follow check error:", err.response?.data || err.message);
